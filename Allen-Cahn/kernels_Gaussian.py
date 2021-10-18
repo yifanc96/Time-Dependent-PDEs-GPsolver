@@ -37,3 +37,6 @@ def Delta_x1_D_y1_kappa(x1,y1, sigma):
 def Delta_x1_Delta_y1_kappa(x1,y1, sigma):
     val = grad(Delta_x1_D_y1_kappa,1)(x1, y1, sigma)
     return val
+
+def Delta_x1_D_y2_kappa(x1,y1, sigma):
+    val = grad(Delta_x1_kappa,2)(x1, y1, sigma)
