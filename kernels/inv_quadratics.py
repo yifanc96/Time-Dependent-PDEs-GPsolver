@@ -41,7 +41,7 @@ def D_wx_Delta_y_kappa(x,y, d,sigma,w):
     val = jnp.sum(w*(x-y))*(16*sigma**2)*(2*sigma**2*(2+d)+(-4+d)*dist2)/(2*sigma**2+dist2)**4
     return val
 
-
+# Delta
 def Delta_x_kappa(x,y,d,sigma):
     dist2 = jnp.sum((x-y)**2)
     val = -4*sigma**2*(2*(sigma**2)*d+(-4+d)*dist2)/(2*(sigma**2)+dist2)**3

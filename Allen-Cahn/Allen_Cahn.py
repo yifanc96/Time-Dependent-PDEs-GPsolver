@@ -1,5 +1,5 @@
 import jax.numpy as jnp
-from jax import grad, vmap, hessian
+from jax import grad, vmap, hessian, jit
 
 import jax.ops as jop
 from jax.config import config; 
@@ -84,6 +84,7 @@ def assembly_Theta(X_domain, sigma):
     
     return Theta
 
+@jit
 def J_loss(v, rhs_f, L,dt):
     N_domain = onp.shape(rhs_f)[0]
     
@@ -98,6 +99,7 @@ def J_loss(v, rhs_f, L,dt):
 
 grad_J = grad(J_loss)
 
+@jit
 def GN_J(v, rhs_f, L, dt, v_old):
     N_domain = onp.shape(rhs_f)[0]
     
@@ -112,7 +114,7 @@ def GN_J(v, rhs_f, L, dt, v_old):
     temp = jnp.linalg.solve(L,vv)
     return jnp.dot(temp, temp)
 
-Hessian_GN=hessian(GN_J)
+Hessian_GN=jit(hessian(GN_J))
 
 def time_steping_solve(X_domain, dt,T,num_pts, step_size = 1, nugget = 1e-10, sigma=0.2, GN_iteration = 4):
     Nt = int(T/dt)+1

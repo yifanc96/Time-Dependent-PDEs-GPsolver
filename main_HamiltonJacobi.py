@@ -5,10 +5,9 @@
 import os
 
 import jax.numpy as jnp
-from jax import vmap
+from jax import vmap, jit
 from jax.config import config; 
 config.update("jax_enable_x64", True)
-# os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = ".45"
 
 import numpy as onp
 import argparse
@@ -31,13 +30,13 @@ def get_parser():
     parser.add_argument("--randomseed", type=int, default=9999)
     args = parser.parse_args()    
     return args
-
+@jit
 def get_GNkernel_train(x,y,wx0,wx1,wy0,wy1,d,sigma):
     return wx0*wy0*kappa(x,y,d,sigma) + wx0*D_wy_kappa(x,y,d, sigma,wy1) + wy0* D_wx_kappa(x,y,d, sigma,wx1) + D_wx_D_wy_kappa(x,y,d,sigma,wx1,wy1)
-
+@jit
 def get_GNkernel_val_predict(x,y,wy0,wy1,d,sigma):
     return wy0*kappa(x,y,d,sigma) + D_wy_kappa(x,y,d, sigma,wy1)
-
+@jit
 def get_GNkernel_grad_predict(x,y,wy0,wy1,d,sigma):
     return wy0*D_x_kappa(x,y,d, sigma) + D_x_D_wy_kappa(x,y,d,sigma,wy1)
 
@@ -165,7 +164,7 @@ def logger(args, level = 'INFO'):
     log_name = 'dim' + str(args.dim) + '_kernel' + str(args.kernel)
     logdir = os.path.join(log_root, log_name)
     os.makedirs(logdir, exist_ok=True)
-    log_para = 'sigma-scale' + str(args.sigma_scale) + '_Ndomain' + str(args.N_domain) + '_dt' + str(args.dt).replace(".","") + '_nugget' + str(args.nugget).replace(".","")
+    log_para = 'sigma-scale' + str(args.sigma_scale) + '_Ndomain' + str(args.N_domain) + '_dt' + str(args.dt).replace(".","") + '_diag-nugget' + str(args.nugget).replace(".","")
     date = str(datetime.datetime.now())
     log_base = date[date.find("-"):date.rfind(".")].replace("-", "").replace(":", "").replace(" ", "_")
     filename = log_para + '_' + log_base + '.log'
@@ -207,5 +206,6 @@ if __name__ == '__main__':
     
     logging.info(f'argument is {args}')
     logging.info(f'GN step: {GN_step}, d: {d}, sigma: {sigma}, number of points: {N_domain}, dt: {dt}, T: {T}, kernel: {args.kernel}')
+    
     V = GPsolver(X_init, N_domain, dt, T, sigma, nugget, GN_step)
 
