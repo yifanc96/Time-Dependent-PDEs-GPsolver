@@ -5,7 +5,7 @@ eps = 1e-8
 
 def kappa(x,y,d,sigma):
     dist = jnp.sqrt(jnp.sum((x-y)**2 + eps))
-    val = (1+jnp.sqrt(5)*dist/sigma+5*dist**2/(3*sigma**2)) * jnp.exp(-jnp.sqrt(5)*dist/sigma)
+    val = (15*sigma**3+15*jnp.sqrt(7)*(sigma**2)*dist+42*sigma*(dist**2)+7*jnp.sqrt(7)*dist**3)/(15*sigma**3)*jnp.exp(-jnp.sqrt(7)*dist/sigma)
     return val
 
 def D_wy_kappa(x,y,d, sigma,w):
