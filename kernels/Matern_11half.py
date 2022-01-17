@@ -5,7 +5,7 @@ eps = 1e-8
 
 def kappa(x,y,d,sigma):
     dist = jnp.sqrt(jnp.sum((x-y)**2 + eps))
-    val = (945*sigma**5+945*jnp.sqrt(11)*sigma**4*dist+4620*sigma**3*dist^2+1155*jnp.sqrt(11)*sigma**2*dist**3+1815*sigma*dist**4+121*jnp.sqrt(11)*dist**5)/(945*sigma**5)*jnp.exp(-jnp.sqrt(11)*dist/sigma)
+    val = (945*sigma**5+945*jnp.sqrt(11)*sigma**4*dist+4620*sigma**3*dist**2+1155*jnp.sqrt(11)*sigma**2*dist**3+1815*sigma*dist**4+121*jnp.sqrt(11)*dist**5)/(945*sigma**5)*jnp.exp(-jnp.sqrt(11)*dist/sigma)
     return val
 
 def D_wy_kappa(x,y,d, sigma,w):
@@ -14,18 +14,6 @@ def D_wy_kappa(x,y,d, sigma,w):
 
 def Delta_y_kappa(x,y,d,sigma):
     val = jnp.trace(hessian(lambda y: kappa(x,y,d,sigma))(y))
-    return val
-
-def Delta_y_i_kappa(x,y,d,sigma, i):
-    w = jnp.zeros(d)
-    w[i] = 1.0
-    _, val = jvp(lambda y: D_wy_kappa(x,y,d, sigma,w),(y,),(w,))
-    return val
-
-def Delta_y_kappa2(x,y,d,sigma):
-    val = 0.0
-    for i in jnp.arange(d):
-        val += Delta_y_i_kappa(x,y,d,sigma, i)
     return val
 
 def D_wx_kappa(x,y,d, sigma,w):
@@ -62,7 +50,6 @@ def Delta_x_D_wy_kappa(x,y, d,sigma,w):
 def Delta_x_Delta_y_kappa(x,y,d,sigma):
     val = jnp.trace(hessian(lambda x: Delta_y_kappa(x,y,d, sigma))(x))
     return val
-
 
 
 # test

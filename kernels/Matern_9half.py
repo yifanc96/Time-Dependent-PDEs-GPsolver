@@ -16,18 +16,6 @@ def Delta_y_kappa(x,y,d,sigma):
     val = jnp.trace(hessian(lambda y: kappa(x,y,d,sigma))(y))
     return val
 
-def Delta_y_i_kappa(x,y,d,sigma, i):
-    w = jnp.zeros(d)
-    w[i] = 1.0
-    _, val = jvp(lambda y: D_wy_kappa(x,y,d, sigma,w),(y,),(w,))
-    return val
-
-def Delta_y_kappa2(x,y,d,sigma):
-    val = 0.0
-    for i in jnp.arange(d):
-        val += Delta_y_i_kappa(x,y,d,sigma, i)
-    return val
-
 def D_wx_kappa(x,y,d, sigma,w):
     _, val = jvp(lambda x: kappa(x,y,d,sigma),(x,),(w,))
     return val
