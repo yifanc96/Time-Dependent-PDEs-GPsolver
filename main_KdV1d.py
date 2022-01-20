@@ -30,8 +30,8 @@ def get_parser():
     parser.add_argument("--sigma", type = float, default = 0.1)
     
      # sampling points
-    parser.add_argument("--dt", type = float, default = 0.01)
-    parser.add_argument("--T", type = float, default = 0.8)
+    parser.add_argument("--dt", type = float, default = 0.04)
+    parser.add_argument("--T", type = float, default = 1.2)
     parser.add_argument("--N_domain", type = int, default = 128)
     
     # GN iterations
