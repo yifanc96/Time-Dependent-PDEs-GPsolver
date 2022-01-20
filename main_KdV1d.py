@@ -33,6 +33,7 @@ def get_parser():
     parser.add_argument("--dt", type = float, default = 0.04)
     parser.add_argument("--T", type = float, default = 1.2)
     parser.add_argument("--N_domain", type = int, default = 128)
+    parser.add_argument("--time_stepping",type=str, default = "BackwardEuler", choices = ["CrankNicolson", "BackwardEuler"])
     
     # GN iterations
     parser.add_argument("--nugget", type = float, default = 1e-9)
@@ -122,7 +123,7 @@ def assembly_Theta_value_predict(X_infer, X_domain, w0, w1, wg, sigma):
 
     return Theta
 
-def time_steping_GPsolver(X_domain, dt, sigma=0.2, nugget = 1e-10, GN_step = 4):
+def time_steping_GPsolver(X_domain, dt, sigma=0.2, nugget = 1e-10, GN_step = 4, time_stepping = "CrankNicolson"):
 
     Nt,num_pts,_ = onp.shape(X_domain)
     
@@ -149,10 +150,18 @@ def time_steping_GPsolver(X_domain, dt, sigma=0.2, nugget = 1e-10, GN_step = 4):
         cur_X_domain = X_domain[iter_i+1,:,1]
         cur_X_domain = cur_X_domain[:, onp.newaxis]
         
-        rhs_CN = 2/dt * temp - temp*temp_x - nu*temp_xxx # RHS given by Crank–Nicolson
+        if time_stepping == "CrankNicolson":
+            rhs_CN = 2/dt * temp - temp*temp_x - nu*temp_xxx # RHS given by Crank–Nicolson
+        elif time_stepping == "BackwardEuler":
+            rhs_BE = 1/dt*temp
+        
         for iter_step in range(GN_step):
-            rhs= rhs_CN + temp*temp_x
-            w0 = 2/dt + temp_x
+            if time_stepping == "CrankNicolson":
+                rhs = rhs_CN + temp*temp_x
+                w0 = 2/dt + temp_x
+            elif time_stepping == "BackwardEuler":
+                rhs = rhs_BE + temp*temp_x
+                w0 = 1/dt + temp_x
             wg = temp
             Theta_train = assembly_Theta(cur_X_domain, w0[:, onp.newaxis], w1[:, onp.newaxis], wg[:, onp.newaxis], sigma)
             Theta_test = assembly_Theta_value_predict(cur_X_domain, cur_X_domain, w0[:, onp.newaxis], w1[:, onp.newaxis], wg[:, onp.newaxis], sigma)
@@ -179,7 +188,7 @@ def logger(args, level = 'INFO'):
     log_name = 'kernel_' + str(args.kernel)
     logdir = os.path.join(log_root, log_name)
     os.makedirs(logdir, exist_ok=True)
-    log_para = 'nu' + f'{args.nu:.3f}' + 'sigma' + str(args.sigma) + '_Ndomain' + str(args.N_domain) + '_nugget' + str(args.nugget).replace(".","")
+    log_para = args.time_stepping + '_' + 'nu' + f'{args.nu:.3f}' + 'sigma' + str(args.sigma) + '_Ndomain' + str(args.N_domain) + '_nugget' + str(args.nugget).replace(".","")
     date = str(datetime.datetime.now())
     log_base = date[date.find("-"):date.rfind(".")].replace("-", "").replace(":", "").replace(" ", "_")
     filename = log_para + '_' + log_base + '.log'
@@ -242,9 +251,9 @@ if __name__ == '__main__':
     GN_step = args.GNsteps
     
     logging.info(f'GN step: {GN_step}, sigma: {sigma}, number of points: N_domain {N_domain}, kernel: {args.kernel}, nugget: {args.nugget}')
-    
+    logging.info(f'time stepping: {args.time_stepping}')
     # solve the equation
-    sol_domain = time_steping_GPsolver(X_domain, dt, nugget = nugget, sigma=sigma, GN_step = GN_step)
+    sol_domain = time_steping_GPsolver(X_domain, dt, nugget = nugget, sigma=sigma, GN_step = GN_step, time_stepping = args.time_stepping)
     
     # logging.info('[Calculating errs at collocation points ...]')
     # ######### get the solution error
