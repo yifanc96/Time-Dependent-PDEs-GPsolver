@@ -25,13 +25,13 @@ def get_parser():
     parser.add_argument("--nu", type=float, default = 0.01/onp.pi)
     # parser.add_argument("--nu", type=float, default = 0.02)
     # kernel setting
-    parser.add_argument("--kernel", type=str, default="gaussian", choices=["gaussian","inv_quadratics"])
+    parser.add_argument("--kernel", type=str, default="gaussian", choices=["gaussian","inv_quadratics", "Matern_5half"])
     parser.add_argument("--sigma", type = float, default = 0.01)
     
      # sampling points
-    parser.add_argument("--dt", type = float, default = 0.02)
+    parser.add_argument("--dt", type = float, default = 0.04)
     parser.add_argument("--T", type = float, default = 1.0)
-    parser.add_argument("--N_domain", type = int, default = 400)
+    parser.add_argument("--N_domain", type = int, default = 500)
     parser.add_argument("--time_stepping",type=str, default = "CrankNicolson", choices = ["CrankNicolson", "BackwardEuler"])
     
     # GN iterations

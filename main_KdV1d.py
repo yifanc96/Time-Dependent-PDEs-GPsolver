@@ -206,7 +206,8 @@ def set_random_seeds(args):
 # boundary condition
 # x1 = t
 def u(x1, x2):
-    return jnp.cos(jnp.pi*x2)
+    # return jnp.cos(jnp.pi*x2)
+    return jnp.exp(-x2**2/0.01)
 @jit
 def u_x(x1, x2):
     return grad(u,1)(x1,x2)
