@@ -59,22 +59,22 @@ def sample_points(num_pts, dt, T, option = 'grid'):
 
 
 @jit
-def get_GNkernel_train(x,y,wx0,wx1,wxg,wy0,wy1,wyg,d,sigma):
+def get_GNkernel_train(x,y,wx0,wx1,wxg,d,sigma):
     # wx0 * delta_x + wxg * nabla delta_x + wx1 * Delta delta_x 
-    return wx0*wy0*kappa(x,y,d,sigma) + wx0*wy1*Delta_y_kappa(x,y,d,sigma) + wy0*wx1*Delta_x_kappa(x,y,d,sigma) + wx1*wy1*Delta_x_Delta_y_kappa(x,y,d,sigma) + wx0*D_wy_kappa(x,y,d,sigma,wyg) + wy0*D_wx_kappa(x,y,d,sigma,wxg) + wx1*Delta_x_D_wy_kappa(x,y,d,sigma,wyg) + wy1*D_wx_Delta_y_kappa(x,y,d,sigma,wxg) + D_wx_D_wy_kappa(x,y,d,sigma,wxg,wyg)
+    return wx0*kappa(x,y,d,sigma) + wx1*Delta_x_kappa(x,y,d,sigma) + D_wx_kappa(x,y,d,sigma,wxg)
 @jit
-def get_GNkernel_train_boundary(x,y,wy0,wy1,wyg,d,sigma):
-    return wy0*kappa(x,y,d,sigma) + wy1*Delta_y_kappa(x,y,d,sigma) + D_wy_kappa(x,y,d,sigma,wyg)
+def get_GNkernel_train_boundary(x,y,d,sigma):
+    return kappa(x,y,d,sigma)
 @jit
-def get_GNkernel_val_predict(x,y,wy0,wy1,wyg,d,sigma):
-    return wy0*kappa(x,y,d,sigma) + wy1*Delta_y_kappa(x,y,d,sigma) + D_wy_kappa(x,y,d,sigma,wyg)
+def get_GNkernel_val_predict(x,y,d,sigma):
+    return kappa(x,y,d,sigma)
 @jit
-def get_GNkernel_ux_predict(x,y,wy0,wy1,wyg,d,sigma):
+def get_GNkernel_ux_predict(x,y,d,sigma):
     wxg = 1.0
-    return wy0*D_wx_kappa(x,y,d,sigma,wxg) + wy1*D_wx_Delta_y_kappa(x,y,d,sigma,wxg) + D_wx_D_wy_kappa(x,y,d,sigma,wxg, wyg)
+    return D_wx_kappa(x,y,d,sigma,wxg)
 @jit
-def get_GNkernel_uxx_predict(x,y,wy0,wy1,wyg,d,sigma):
-    return wy0*Delta_x_kappa(x,y,d,sigma) + wy1*Delta_x_Delta_y_kappa(x,y,d,sigma) + Delta_x_D_wy_kappa(x,y,d,sigma,wyg)
+def get_GNkernel_uxx_predict(x,y,d,sigma):
+    return Delta_x_kappa(x,y,d,sigma)
 
 
 def assembly_Theta(X_domain, X_boundary, w0, w1, wg, sigma):
@@ -92,32 +92,35 @@ def assembly_Theta(X_domain, X_boundary, w0, w1, wg, sigma):
     XbXd0 = onp.reshape(onp.tile(X_boundary,(1,N_domain)),(-1,d))
     XbXd1 = onp.tile(X_domain,(N_boundary,1))
     
+    XdXb0 = onp.reshape(onp.tile(X_domain,(1,N_boundary)),(-1,d))
+    XdXb1 = onp.tile(X_boundary,(N_domain,1))
+    
     XbXb0 = onp.reshape(onp.tile(X_boundary,(1,N_boundary)),(-1,d))
     XbXb1 = onp.tile(X_boundary,(N_boundary,1))
     
     arr_wx0 = onp.reshape(onp.tile(w0,(1,N_domain)),(-1,1))
     arr_wx1 = onp.reshape(onp.tile(w1,(1,N_domain)),(-1,1))
     arr_wxg = onp.reshape(onp.tile(wg,(1,N_domain)),(-1,d))
-    arr_wy0 = onp.tile(w0,(N_domain,1))
-    arr_wy1 = onp.tile(w1,(N_domain,1))
-    arr_wyg = onp.tile(wg,(N_domain,1))
     
-    arr_wy0_bd = onp.tile(w0,(N_boundary,1))
-    arr_wy1_bd = onp.tile(w1,(N_boundary,1))
-    arr_wyg_bd = onp.tile(wg,(N_boundary,1))
+    arr_wx0_bd = onp.reshape(onp.tile(w0,(1,N_boundary)),(-1,1))
+    arr_wx1_bd = onp.reshape(onp.tile(w1,(1,N_boundary)),(-1,1))
+    arr_wxg_bd = onp.reshape(onp.tile(wg,(1,N_boundary)),(-1,d))
     
-    val = vmap(lambda x,y,wx0,wx1,wxg,wy0,wy1,wyg: get_GNkernel_train(x,y,wx0,wx1,wxg,wy0,wy1,wyg,d,sigma))(XdXd0,XdXd1,arr_wx0,arr_wx1,arr_wxg,arr_wy0,arr_wy1,arr_wyg)
+    val = vmap(lambda x,y,wx0,wx1,wxg: get_GNkernel_train(x,y,wx0,wx1,wxg,d,sigma))(XdXd0,XdXd1,arr_wx0,arr_wx1,arr_wxg)
     Theta[:N_domain,:N_domain] = onp.reshape(val, (N_domain,N_domain))
     
-    val = vmap(lambda x,y,wy0,wy1,wyg: get_GNkernel_train_boundary(x,y,wy0,wy1,wyg,d,sigma))(XbXd0,XbXd1,arr_wy0_bd,arr_wy1_bd,arr_wyg_bd)
-    Theta[N_domain:,:N_domain] = onp.reshape(val, (N_boundary,N_domain))
-    Theta[:N_domain,N_domain:] = onp.transpose(onp.reshape(val, (N_boundary,N_domain)))
+    val = vmap(lambda x,y,wx0,wx1,wxg: get_GNkernel_train(x,y,wx0,wx1,wxg,d,sigma))(XdXb0,XdXb1,arr_wx0_bd,arr_wx1_bd,arr_wxg_bd)
+    Theta[:N_domain,N_domain:] = onp.reshape(val, (N_domain,N_boundary))
     
-    val = vmap(lambda x,y: kappa(x,y,d,sigma))(XbXb0, XbXb1)
-    Theta[N_domain:,N_domain:] = onp.reshape(val, (N_boundary, N_boundary))
+    val = vmap(lambda x,y: get_GNkernel_train_boundary(x,y,d,sigma))(XbXd0, XbXd1)
+    Theta[N_domain:,:N_domain] = onp.reshape(val, (N_boundary,N_domain))
+    
+    val = vmap(lambda x,y: get_GNkernel_train_boundary(x,y,d,sigma))(XbXb0, XbXb1)
+    Theta[N_domain:,N_domain:] = onp.reshape(val, (N_boundary,N_boundary))
+
     return Theta
 
-def assembly_Theta_value_predict(X_infer, X_domain, X_boundary, w0, w1, wg, sigma):
+def assembly_Theta_value_predict(X_infer, X_domain, X_boundary, sigma):
     N_infer, d = onp.shape(X_infer)
     N_domain, _ = onp.shape(X_domain)
     N_boundary, _ = onp.shape(X_boundary)
@@ -128,27 +131,24 @@ def assembly_Theta_value_predict(X_infer, X_domain, X_boundary, w0, w1, wg, sigm
     
     XiXb0 = onp.reshape(onp.tile(X_infer,(1,N_boundary)),(-1,d))
     XiXb1 = onp.tile(X_boundary,(N_infer,1))
+
     
-    arr_wy0 = onp.tile(w0,(N_infer,1))
-    arr_wy1 = onp.tile(w1,(N_infer,1))
-    arr_wyg = onp.tile(wg,(N_infer,1))
-    
-    val = vmap(lambda x,y,wy0,wy1,wyg: get_GNkernel_val_predict(x,y,wy0,wy1,wyg,d,sigma))(XiXd0,XiXd1,arr_wy0,arr_wy1,arr_wyg)
+    val = vmap(lambda x,y: get_GNkernel_val_predict(x,y,d,sigma))(XiXd0,XiXd1)
     Theta[:N_infer,:N_domain] = onp.reshape(val, (N_infer,N_domain))
     
-    val = vmap(lambda x,y,wy0,wy1,wyg: get_GNkernel_ux_predict(x,y,wy0,wy1,wyg,d,sigma))(XiXd0,XiXd1,arr_wy0,arr_wy1,arr_wyg)
+    val = vmap(lambda x,y: get_GNkernel_ux_predict(x,y,d,sigma))(XiXd0,XiXd1)
     Theta[N_infer:2*N_infer,:N_domain] = onp.reshape(val, (N_infer,N_domain))
     
-    val = vmap(lambda x,y,wy0,wy1,wyg: get_GNkernel_uxx_predict(x,y,wy0,wy1,wyg,d,sigma))(XiXd0,XiXd1,arr_wy0,arr_wy1,arr_wyg)
+    val = vmap(lambda x,y: get_GNkernel_uxx_predict(x,y,d,sigma))(XiXd0,XiXd1)
     Theta[2*N_infer:,:N_domain] = onp.reshape(val, (N_infer,N_domain))
     
-    val = vmap(lambda x,y: kappa(x,y,d,sigma))(XiXb0, XiXb1)
+    val = vmap(lambda x,y: get_GNkernel_val_predict(x,y,d,sigma))(XiXb0, XiXb1)
     Theta[:N_infer,N_domain:] = onp.reshape(val, (N_infer,N_boundary))
     
-    val = vmap(lambda x,y: D_x_kappa(x,y,d,sigma))(XiXb0, XiXb1)
+    val = vmap(lambda x,y: get_GNkernel_ux_predict(x,y,d,sigma))(XiXb0, XiXb1)
     Theta[N_infer:2*N_infer,N_domain:] = onp.reshape(val, (N_infer,N_boundary))
     
-    val = vmap(lambda x,y: Delta_x_kappa(x,y,d,sigma))(XiXb0, XiXb1)
+    val = vmap(lambda x,y: get_GNkernel_uxx_predict(x,y,d,sigma))(XiXb0, XiXb1)
     Theta[2*N_infer:,N_domain:] = onp.reshape(val, (N_infer,N_boundary))
     return Theta
 
@@ -195,8 +195,8 @@ def time_steping_GPsolver(X_domain, X_boundary, dt, sigma=0.2, nugget = 1e-10, G
                 w0 = 1/dt + temp_x
             wg = temp
             Theta_train = assembly_Theta(cur_X_domain, cur_X_boundary, w0[:, onp.newaxis], w1[:, onp.newaxis], wg[:, onp.newaxis], sigma)
-            Theta_test = assembly_Theta_value_predict(cur_X_domain, cur_X_domain, cur_X_boundary, w0[:, onp.newaxis], w1[:, onp.newaxis], wg[:, onp.newaxis], sigma)
-            sol = Theta_test @ (onp.linalg.solve(Theta_train + nugget*onp.diag(onp.diag(Theta_train)),rhs))
+            Theta_test = assembly_Theta_value_predict(cur_X_domain, cur_X_domain, cur_X_boundary, sigma)
+            sol = Theta_test @ onp.linalg.solve(Theta_train + nugget*onp.diag(onp.diag(Theta_train)),rhs)
             
             temp = sol[:N_domain]
             temp_x = sol[N_domain:2*N_domain]
@@ -222,7 +222,7 @@ def logger(args, level = 'INFO'):
     log_para = args.time_stepping + '_' + 'nu' + f'{args.nu:.3f}' + 'sigma' + str(args.sigma) + '_Ndomain' + str(args.N_domain) + '_nugget' + str(args.nugget).replace(".","")
     date = str(datetime.datetime.now())
     log_base = date[date.find("-"):date.rfind(".")].replace("-", "").replace(":", "").replace(" ", "_")
-    filename = log_para + '_' + log_base + '.log'
+    filename = 'nonsys' + log_para + '_' + log_base + '.log'
     logging.basicConfig(level=logging.__dict__[level],
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
